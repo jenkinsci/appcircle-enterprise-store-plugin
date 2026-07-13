@@ -15,7 +15,7 @@
   <packaging>hpi</packaging>
 
   <name>Appcircle Enterprise App Store</name>
-  <description>Appcircle Enterprise App Store Plugin for Jenkins</description>
+  <description>Appcircle Enterprise App Store is your own mobile app store for providing access to in-house apps with a customizable mobile storefront.</description>
   <url>https://github.com/jenkinsci/appcircle-enterprise-app-store-plugin/blob/master/README.md</url>
   <licenses>
     <license>
