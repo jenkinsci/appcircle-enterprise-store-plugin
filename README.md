@@ -114,6 +114,8 @@ without any change.
 
 - To learn more about the Appcircle Enterprise App Store, please refer to [Appcircle Enterprise App Store](https://appcircle.io/enterprise-app-store)
 
+- For the full plugin setup guide, see the [Appcircle Enterprise App Store documentation](https://docs.appcircle.io/marketplace/jenkins/enterprise-app-store)
+
 ## Issues
 
 Report issues and enhancements at info@appcircle.io
