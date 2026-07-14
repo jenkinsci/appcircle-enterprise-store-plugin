@@ -11,7 +11,8 @@ Learn more about [Appcircle Enterprise App Store](https://appcircle.io/enterpris
 1. **Direct File Sharing:**
    - **Skip Traditional Stores:** Share .IPA, APK, or AAB files directly, avoiding the need to wait for Apple App Store or Google Play approvals.
 2. **Flexible Sharing Options:**
-   - **Beta and Live Modes:** Share your app in ‘beta’ mode for testing new features or identifying bugs, or in ‘live’ mode for stable versions. This flexibility helps maintain the development lifecycle without interruptions.
+   - **Beta and Live Channels:** Share your app on the Beta channel for testing new features or identifying bugs, or on the Live channel for stable versions.
+   - **Unlisted Publishing:** Publish an app version as unlisted to make it accessible only through a direct link, without appearing in the store's app list.
 3. **Enhanced Security:**
    - **Secure Authentication:** Access the Enterprise App Store with extra secure authentication using Enterprise Authentication Methods.
    - **Controlled Access:** Ensure that only authorized users can access the app store and its contents.
@@ -22,17 +23,10 @@ Learn more about [Appcircle Enterprise App Store](https://appcircle.io/enterpris
 6. **Streamlined Workflow:**
    - **Seamless Integration:** Integrates smoothly with your existing workflow, making it easy to manage and distribute apps within your organization.
    - **Efficient Management:** Track and manage applications, versions, testers, and teams effectively, ensuring a smooth distribution process.
+7. **Re-Sign and Auto-Resign:**
+   - **Update Without Rebuilding:** Re-sign iOS and Android binaries with updated signing identities, manually or automatically, and keep distributing without a new build.
 
 These features make the Appcircle Enterprise App Store a powerful tool for securely and efficiently distributing in-house applications, offering flexibility, enhanced security, and a streamlined workflow.
-
-**Flexible Sharing Options**
-
-- **Beta and Live Channels:** Share your app on the Beta channel for testing new features or identifying bugs, or on the Live channel for stable versions.
-- **Unlisted Publishing:** Publish an app version as unlisted to make it accessible only through a direct link, without appearing in the store's app list.
-
-**Re-Sign and Auto-Resign**
-
-- **Update Without Rebuilding:** Re-sign iOS and Android binaries with updated signing identities, manually or automatically, and keep distributing without a new build.
 
 ### Enterprise App Store
 
@@ -63,9 +57,9 @@ Also, do not forget to add the plugin after your build steps. Because you will b
 
 To generate a Personal API Token, follow these steps:
 
-1. Go to the My Organization screen (the second option at the bottom left).
-2. You'll find the Personal API Token section in the top right corner.
-3. Press the "Generate Token" button to generate your first token.
+1. Open the **My Organization** screen from your profile avatar at the bottom left.
+2. Go to the **Security** section and find the **Personal Access Key** card.
+3. Press **Generate Key** to generate your token.
 
 ![Token Generation](docs/assets/PAT.png)
 
