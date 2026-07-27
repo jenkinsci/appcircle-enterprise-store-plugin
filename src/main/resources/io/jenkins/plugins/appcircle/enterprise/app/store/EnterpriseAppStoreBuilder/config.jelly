@@ -1,30 +1,32 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
     <f:entry title="${%Personal API Token}" field="personalAPIToken">
-        <f:password />
+        <f:password clazz="required" checkMessage="${%Personal API Token cannot be empty}"/>
     </f:entry>
     <f:entry title="${%App Path}" field="appPath">
-        <f:textbox checkMethod="post" />
+        <f:textbox/>
     </f:entry>
     <f:entry title="${%Summary}" field="summary">
-        <f:textbox />
+        <f:textbox clazz="required" checkMessage="${%Summary cannot be empty}"/>
     </f:entry>
     <f:entry title="${%Release Notes}" field="releaseNotes">
-        <f:textbox />
+        <f:textbox clazz="required" checkMessage="${%Release Notes cannot be empty}"/>
     </f:entry>
-    <f:entry title="Choose Publish Type" field="publishType">
-        <select name="publishType">
-            <option value="0">None</option>
-            <option value="1">Beta</option>
-            <option value="2">Live</option>
-        </select>
+    <f:entry title="${%Choose Publish Type}" field="publishType">
+        <div class="jenkins-select">
+            <select name="publishType" class="jenkins-select__input">
+                <f:option value="0" selected="${instance.publishType=='0'}">None</f:option>
+                <f:option value="1" selected="${instance.publishType=='1'}">Beta</f:option>
+                <f:option value="2" selected="${instance.publishType=='2'}">Live</f:option>
+            </select>
+        </div>
     </f:entry>
     <f:advanced title="Self-Hosted Appcircle">
         <f:entry title="Auth Endpoint" field="authEndpoint">
-            <f:textbox value="${instance.authEndpoint}"/>
+            <f:textbox/>
         </f:entry>
         <f:entry title="API Endpoint" field="apiEndpoint">
-            <f:textbox value="${instance.apiEndpoint}"/>
+            <f:textbox/>
         </f:entry>
     </f:advanced>
 </j:jelly>

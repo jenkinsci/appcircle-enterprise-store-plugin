@@ -1,5 +1,6 @@
 package io.jenkins.plugins.appcircle.enterprise.app.store;
 
+import hudson.util.Secret;
 import io.jenkins.plugins.appcircle.enterprise.app.store.Models.UserResponse;
 import java.io.IOException;
 import java.net.URI;
@@ -18,7 +19,7 @@ public class AuthService {
 
     public static final String DEFAULT_AUTH_ENDPOINT = "https://auth.appcircle.io";
 
-    public static UserResponse getAcToken(String pat, String authEndpoint) throws IOException, URISyntaxException {
+    public static UserResponse getAcToken(Secret pat, String authEndpoint) throws IOException, URISyntaxException {
         String baseUrl = (authEndpoint == null || authEndpoint.trim().isEmpty())
                 ? DEFAULT_AUTH_ENDPOINT
                 : authEndpoint.trim().replaceAll("/+$", "");
@@ -34,7 +35,7 @@ public class AuthService {
 
         // Set parameters
         Map<String, String> params = new HashMap<>();
-        params.put("pat", pat);
+        params.put("pat", Secret.toString(pat));
 
         // Convert parameters to form data
         StringEntity entity = new StringEntity(encodeParams(params));

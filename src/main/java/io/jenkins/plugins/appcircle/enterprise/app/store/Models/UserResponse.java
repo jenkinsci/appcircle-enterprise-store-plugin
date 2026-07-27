@@ -1,13 +1,16 @@
 package io.jenkins.plugins.appcircle.enterprise.app.store.Models;
 
+import hudson.util.Secret;
+
 public class UserResponse {
-    private final String accessToken;
+    // Stored as Secret so the access token is never held (or serialized) as plaintext.
+    private final Secret accessToken;
 
     public UserResponse(String accessToken) {
-        this.accessToken = accessToken;
+        this.accessToken = Secret.fromString(accessToken);
     }
 
     public String getAccessToken() {
-        return accessToken;
+        return Secret.toString(accessToken);
     }
 }

@@ -1,10 +1,12 @@
 package io.jenkins.plugins.appcircle.enterprise.app.store;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import hudson.FilePath;
+import hudson.util.Secret;
 import io.jenkins.plugins.appcircle.enterprise.app.store.Models.AppVersions;
 import io.jenkins.plugins.appcircle.enterprise.app.store.Models.EnterpriseProfile;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -25,10 +27,9 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.FileEntity;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -41,7 +42,8 @@ public class UploadService {
 
     private static final int MAX_RETRIES = 5;
 
-    String authToken;
+    // Stored as Secret so the bearer token is never held (or serialized) as plaintext.
+    private final Secret authToken;
     String baseUrl;
 
     @DataBoundConstructor
@@ -50,16 +52,15 @@ public class UploadService {
     }
 
     public UploadService(String authToken, String apiEndpoint) {
-        this.authToken = authToken;
+        this.authToken = Secret.fromString(authToken);
         this.baseUrl = (apiEndpoint == null || apiEndpoint.trim().isEmpty())
                 ? DEFAULT_API_ENDPOINT
                 : apiEndpoint.trim().replaceAll("/+$", "");
     }
 
-    public JSONObject uploadArtifact(String appPath) throws IOException {
-        File file = new File(appPath);
-        String fileName = file.getName();
-        long fileSize = file.length();
+    public JSONObject uploadArtifact(FilePath artifact) throws IOException, InterruptedException {
+        String fileName = artifact.getName();
+        long fileSize = artifact.length();
 
         // 1) Request signed-URL upload information (size-validated).
         JSONObject uploadInfo = getUploadInformation(fileName, fileSize);
@@ -73,9 +74,9 @@ public class UploadService {
 
         // 2) Upload the binary to the signed URL.
         if ("POST".equals(httpMethod)) {
-            uploadViaPost(uploadUrl, file, configuration);
+            uploadViaPost(uploadUrl, artifact, fileName, configuration);
         } else {
-            uploadViaPut(uploadUrl, file);
+            uploadViaPut(uploadUrl, artifact, fileSize);
         }
 
         // 3) Commit the upload. createNewProfile=true lets the server match the binary to its profile by package
@@ -93,7 +94,7 @@ public class UploadService {
 
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
                 HttpGet request = new HttpGet(uri);
-                request.setHeader("Authorization", "Bearer " + this.authToken);
+                request.setHeader("Authorization", "Bearer " + Secret.toString(this.authToken));
                 request.setHeader("Accept", "application/json");
 
                 try (CloseableHttpResponse response = httpClient.execute(request)) {
@@ -110,14 +111,17 @@ public class UploadService {
         }
     }
 
-    private void uploadViaPut(String uploadUrl, File file) throws IOException {
+    private void uploadViaPut(String uploadUrl, FilePath artifact, long fileSize)
+            throws IOException, InterruptedException {
         IOException lastError = null;
         long delayMillis = 1000;
 
         for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-            try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            // Reopen the stream from the agent on every attempt so retries re-send from the start.
+            try (CloseableHttpClient httpClient = HttpClients.createDefault();
+                    InputStream in = artifact.read()) {
                 HttpPut request = new HttpPut(uploadUrl);
-                request.setEntity(new FileEntity(file, ContentType.APPLICATION_OCTET_STREAM));
+                request.setEntity(new InputStreamEntity(in, fileSize, ContentType.APPLICATION_OCTET_STREAM));
 
                 try (CloseableHttpResponse response = httpClient.execute(request)) {
                     int status = response.getStatusLine().getStatusCode();
@@ -144,8 +148,10 @@ public class UploadService {
         throw lastError != null ? lastError : new IOException("File upload failed.");
     }
 
-    private void uploadViaPost(String uploadUrl, File file, @Nullable JSONObject configuration) throws IOException {
-        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+    private void uploadViaPost(String uploadUrl, FilePath artifact, String fileName, @Nullable JSONObject configuration)
+            throws IOException, InterruptedException {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault();
+                InputStream in = artifact.read()) {
             HttpPost request = new HttpPost(uploadUrl);
 
             MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -156,7 +162,7 @@ public class UploadService {
                 }
             }
             // The file field MUST be appended last.
-            builder.addPart("file", new FileBody(file));
+            builder.addBinaryBody("file", in, ContentType.APPLICATION_OCTET_STREAM, fileName);
             request.setEntity(builder.build());
 
             try (CloseableHttpResponse response = httpClient.execute(request)) {
@@ -182,7 +188,7 @@ public class UploadService {
 
             try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
                 HttpPost request = new HttpPost(uri);
-                request.setHeader("Authorization", "Bearer " + this.authToken);
+                request.setHeader("Authorization", "Bearer " + Secret.toString(this.authToken));
                 request.setHeader("Accept", "application/json");
                 request.setEntity(new StringEntity(payload.toString(), ContentType.APPLICATION_JSON));
 
@@ -219,7 +225,7 @@ public class UploadService {
         CloseableHttpClient httpClient = HttpClients.createDefault();
 
         HttpPatch httpPatch = new HttpPatch(url);
-        httpPatch.setHeader("Authorization", "Bearer " + this.authToken);
+        httpPatch.setHeader("Authorization", "Bearer " + Secret.toString(this.authToken));
         httpPatch.setHeader("Content-Type", "application/json");
 
         JSONObject jsonBody = new JSONObject();
@@ -245,7 +251,7 @@ public class UploadService {
         String url = String.format("%s/store/v2/profiles/%s/app-versions", this.baseUrl, entProfileId);
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpGet getRequest = new HttpGet(url);
-        getRequest.setHeader("Authorization", "Bearer " + this.authToken);
+        getRequest.setHeader("Authorization", "Bearer " + Secret.toString(this.authToken));
         getRequest.setHeader("Accept", "application/json");
 
         try (CloseableHttpResponse response = httpClient.execute(getRequest)) {
@@ -285,7 +291,7 @@ public class UploadService {
 
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet request = new HttpGet(url);
-            request.setHeader("Authorization", "Bearer " + this.authToken);
+            request.setHeader("Authorization", "Bearer " + Secret.toString(this.authToken));
 
             try (CloseableHttpResponse response = httpClient.execute(request)) {
                 HttpEntity entity = response.getEntity();
@@ -319,7 +325,7 @@ public class UploadService {
         String url = String.format("%s/store/v2/profiles", this.baseUrl);
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpGet getRequest = new HttpGet(url);
-        getRequest.setHeader("Authorization", "Bearer " + this.authToken);
+        getRequest.setHeader("Authorization", "Bearer " + Secret.toString(this.authToken));
         getRequest.setHeader("Accept", "application/json");
 
         try (CloseableHttpResponse response = httpClient.execute(getRequest)) {

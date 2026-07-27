@@ -45,8 +45,8 @@ public class EnterpriseAppStoreBuilder extends Builder implements SimpleBuildSte
         this.publishType = publishType;
     }
 
-    public String getPersonalAPIToken() {
-        return personalAPIToken.getPlainText();
+    public Secret getPersonalAPIToken() {
+        return personalAPIToken;
     }
 
     public String getAuthEndpoint() {
@@ -97,10 +97,17 @@ public class EnterpriseAppStoreBuilder extends Builder implements SimpleBuildSte
                         + ". For Android, use .apk or .aab. For iOS, use .ipa.");
             }
 
-            UserResponse response = AuthService.getAcToken(this.personalAPIToken.getPlainText(), this.authEndpoint);
+            UserResponse response = AuthService.getAcToken(this.personalAPIToken, this.authEndpoint);
             listener.getLogger().println("Login is successful.");
             UploadService uploadService = new UploadService(response.getAccessToken(), this.apiEndpoint);
-            JSONObject uploadResponse = uploadService.uploadArtifact(this.appPath);
+
+            // The artifact lives in the build workspace on the agent, not on the controller,
+            // so resolve it through the FilePath passed to perform() (remote-safe access).
+            FilePath artifact = workspace.child(this.appPath);
+            if (!artifact.exists()) {
+                throw new IOException("App path not found in workspace: " + this.appPath);
+            }
+            JSONObject uploadResponse = uploadService.uploadArtifact(artifact);
             Boolean result = uploadService.checkUploadStatus(uploadResponse.optString("taskId"));
 
             if (result) {
@@ -141,37 +148,16 @@ public class EnterpriseAppStoreBuilder extends Builder implements SimpleBuildSte
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
+        // Validate the artifact file extension only. No sensitive/back-end access, so no permission
+        // check is needed here; the lgtm suppression tells the Jenkins security scan this is intentional.
+        // Empty/required validation for the other fields is handled declaratively in config.jelly.
         @POST
-        public FormValidation doCheckPersonalAPIToken(@QueryParameter String value) {
-            if (value.isEmpty()) return FormValidation.error("Personal API Token cannot be empty");
-            return FormValidation.ok();
-        }
-
-        @POST
-        public FormValidation doCheckAppPath(@QueryParameter String value) {
+        public FormValidation doCheckAppPath(@QueryParameter String value) { // lgtm[jenkins/no-permission-check]
             if (value.isEmpty()) return FormValidation.error("App Path cannot be empty");
             if (!value.matches(".*\\.(apk|aab|ipa)$")) {
                 return FormValidation.error(
                         "Invalid file extension: For Android, use .apk or .aab. For iOS, use .ipa.");
             }
-            return FormValidation.ok();
-        }
-
-        @POST
-        public FormValidation doCheckSummary(@QueryParameter String value) {
-            if (value.isEmpty()) return FormValidation.error("Summary cannot be empty");
-            return FormValidation.ok();
-        }
-
-        @POST
-        public FormValidation doCheckReleaseNotes(@QueryParameter String value) {
-            if (value.isEmpty()) return FormValidation.error("Release Notes cannot be empty");
-            return FormValidation.ok();
-        }
-
-        @POST
-        public FormValidation doCheckPublishType(@QueryParameter String value) {
-            if (value.isEmpty()) return FormValidation.error("Publish Type cannot be empty");
             return FormValidation.ok();
         }
 
